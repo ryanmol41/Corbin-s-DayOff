@@ -105,18 +105,19 @@ async function handleApi(request, response, url) {
     }
   }
 
-  if (!identity) return sendJson(response, 401, { error: 'Choose your name in the top bar first.' });
-
   if (request.method === 'POST' && url.pathname === '/api/time-off') {
     try {
       const details = validateEntry(await readJson(request));
-      const entry = { id: randomUUID(), ...details, createdBy: identity, createdAt: new Date().toISOString() };
+      // Without a profile header, the person taking the time off is the author.
+      const entry = { id: randomUUID(), ...details, createdBy: identity || details.employee, createdAt: new Date().toISOString() };
       await transactEntries((entries) => ({ next: [...entries, entry], result: entry }));
       return sendJson(response, 201, { entry });
     } catch (error) {
       return sendJson(response, error.status || 503, { error: error.status ? error.message : 'The calendar could not save that change. Please try again.' });
     }
   }
+
+  if (!identity) return sendJson(response, 401, { error: 'Choose your name in the top bar first.' });
 
   if (request.method === 'PUT' && url.pathname === '/api/time-off') {
     try {
