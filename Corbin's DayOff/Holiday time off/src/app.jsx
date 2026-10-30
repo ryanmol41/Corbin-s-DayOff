@@ -76,8 +76,9 @@ export default function CalendarBoard() {
     const [themeReady, setThemeReady] = useState(false);
     const themeOwner = useRef("");
     const [form, setForm] = useState({ employee: "", startDate: RANGE_START, endDate: RANGE_START, cover: "", note: "" });
-    async function loadEntries() {
-        setLoading(true);
+    async function loadEntries(silent = false) {
+        if (!silent)
+            setLoading(true);
         try {
             const response = await fetch("/api/time-off", { cache: "no-store", headers: currentUser ? { "X-Team-Member": currentUser } : {} });
             const data = await response.json();
@@ -95,6 +96,15 @@ export default function CalendarBoard() {
         }
     }
     useEffect(() => { void loadEntries(); }, [currentUser]);
+    const refreshState = useRef({ busy: false, loadEntries });
+    refreshState.current = { busy: showForm || saving, loadEntries };
+    useEffect(() => {
+        const timer = window.setInterval(() => {
+            if (!refreshState.current.busy)
+                void refreshState.current.loadEntries(true);
+        }, 5 * 60 * 1000);
+        return () => window.clearInterval(timer);
+    }, []);
     useEffect(() => { if (currentUser)
         window.localStorage.setItem("holiday-coverage-team-member", currentUser); }, [currentUser]);
     useEffect(() => {
