@@ -58,6 +58,14 @@ function rangeLabel(start, end) {
         return `${fmt(start)}–${fmt(end, { day: "numeric" })}`;
     return `${fmt(start)} – ${fmt(end, { month: "short", day: "numeric" })}`;
 }
+async function readBody(response) {
+    try {
+        return await response.json();
+    }
+    catch {
+        return { error: `The calendar server didn’t respond correctly (${response.status}). Please try again.` };
+    }
+}
 function shortName(value) {
     return value.trim().split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -71,7 +79,14 @@ export default function CalendarBoard() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [notice, setNotice] = useState("");
-    const [currentUser, setCurrentUser] = useState(() => window.localStorage.getItem("holiday-coverage-team-member") || "");
+    const [currentUser, setCurrentUser] = useState(() => {
+        try {
+            return window.localStorage.getItem("holiday-coverage-team-member") || "";
+        }
+        catch {
+            return "";
+        }
+    });
     const [theme, setTheme] = useState("light");
     const [themeReady, setThemeReady] = useState(false);
     const themeOwner = useRef("");
@@ -81,7 +96,7 @@ export default function CalendarBoard() {
             setLoading(true);
         try {
             const response = await fetch("/api/time-off", { cache: "no-store", headers: currentUser ? { "X-Team-Member": currentUser } : {} });
-            const data = await response.json();
+            const data = await readBody(response);
             if (!response.ok)
                 throw new Error(data.error || "Could not load the calendar.");
             setEntries(data.entries || []);
@@ -105,8 +120,17 @@ export default function CalendarBoard() {
         }, 5 * 60 * 1000);
         return () => window.clearInterval(timer);
     }, []);
-    useEffect(() => { if (currentUser)
-        window.localStorage.setItem("holiday-coverage-team-member", currentUser); }, [currentUser]);
+    useEffect(() => {
+        try {
+            if (currentUser)
+                window.localStorage.setItem("holiday-coverage-team-member", currentUser);
+            else
+                window.localStorage.removeItem("holiday-coverage-team-member");
+        }
+        catch {
+            // Browser storage can be blocked; the profile still works for this session.
+        }
+    }, [currentUser]);
     useEffect(() => {
         if (!currentUser)
             return;
@@ -139,34 +163,35 @@ export default function CalendarBoard() {
         return sum + Math.round((last - first) / 86400000) + 1;
     }, 0);
     const activeDate = new Date();
-    const today = isoDate(activeDate);
+    // Use the viewer's local date; the UTC date flips to tomorrow in the evening for US time zones.
+    const today = `${activeDate.getFullYear()}-${String(activeDate.getMonth() + 1).padStart(2, "0")}-${String(activeDate.getDate()).padStart(2, "0")}`;
     const peak = dates.map((date) => ({ date, count: entriesForDate(date).length })).sort((a, b) => b.count - a.count)[0];
     function openForm(date = selectedDate) {
         setEditingEntry(null);
+        setNotice("");
         setForm({ employee: currentUser, startDate: date, endDate: date, cover: "", note: "" });
         setShowForm(true);
     }
     function openEdit(entry) {
         setEditingEntry(entry);
+        setNotice("");
         setForm({ employee: entry.employee, startDate: entry.startDate, endDate: entry.endDate, cover: entry.cover, note: entry.note || "" });
         setSelectedDate(entry.startDate);
         setShowForm(true);
     }
     async function submitForm(event) {
         event.preventDefault();
-        if (!currentUser) {
-            setNotice("Choose your name in the top bar before saving.");
-            return;
-        }
+        // Fall back to the form's name when nobody is picked in the top bar.
+        const actor = currentUser || form.employee;
         setSaving(true);
         setNotice("");
         try {
             const response = await fetch("/api/time-off", {
                 method: editingEntry ? "PUT" : "POST",
-                headers: { "Content-Type": "application/json", "X-Team-Member": currentUser },
+                headers: { "Content-Type": "application/json", "X-Team-Member": actor },
                 body: JSON.stringify(editingEntry ? { ...form, id: editingEntry.id } : form),
             });
-            const data = await response.json();
+            const data = await readBody(response);
             if (!response.ok)
                 throw new Error(data.error || "Could not save the request.");
             setEntries((current) => (editingEntry
@@ -176,6 +201,8 @@ export default function CalendarBoard() {
             setShowForm(false);
             setNotice(editingEntry ? "Your time off request was updated." : "Time off added to the team calendar.");
             setEditingEntry(null);
+            if (!currentUser)
+                setCurrentUser(actor);
         }
         catch (error) {
             setNotice(error instanceof Error ? error.message : "Could not save the request.");
@@ -189,7 +216,7 @@ export default function CalendarBoard() {
             return;
         try {
             const response = await fetch(`/api/time-off?id=${encodeURIComponent(id)}`, { method: "DELETE", headers: { "X-Team-Member": currentUser } });
-            const data = await response.json();
+            const data = await readBody(response);
             if (!response.ok)
                 throw new Error(data.error || "Could not remove the entry.");
             setEntries((current) => current.filter((entry) => entry.id !== id));
@@ -225,7 +252,7 @@ export default function CalendarBoard() {
           <div className="date-range-block">
             <span className="date-range-label">PLANNING WINDOW</span>
             <strong>Nov 1, 2026 <span>—</span> Jan 10, 2027</strong>
-            <span className="date-range-caption">8 weeks · shared with your team</span>
+            <span className="date-range-caption">10 weeks · shared with your team</span>
           </div>
         </section>
 
