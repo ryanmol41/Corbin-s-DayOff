@@ -16,7 +16,7 @@ const SEASON_END = '2027-01-10';
 const TEAM_MEMBERS = new Set([
   'Able', 'Andrew', 'Bill', 'Christian', 'Clint', 'Corbin', 'Dave', 'Derrick', 'Ethan', 'Jackson',
   'Jacob G', 'Jacob H', 'Jake', 'John', 'Jon', 'Josh B', 'Josh I', 'Kevin', 'Kyle', 'Preston',
-  'Rob', 'Ryan', 'Seth', 'Shane', 'Sonny', 'Thatcher', 'Tom', 'Victoria', 'Zach', 'Tim',
+  'Rob', 'Ryan', 'Seth', 'Shane', 'Sonny', 'Thatcher', 'Tim', 'Tom', 'Victoria', 'Zach',
 ]);
 
 let writes = Promise.resolve();
