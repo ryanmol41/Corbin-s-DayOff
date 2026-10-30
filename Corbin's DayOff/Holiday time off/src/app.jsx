@@ -11,7 +11,7 @@ const MONTHS = [
 const TEAM_MEMBERS = [
     "Able", "Andrew", "Bill", "Christian", "Clint", "Corbin", "Dave", "Derrick", "Ethan", "Jackson",
     "Jacob G", "Jacob H", "Jake", "John", "Jon", "Josh B", "Josh I", "Kevin", "Kyle", "Preston",
-    "Rob", "Ryan", "Seth", "Shane", "Sonny", "Thatcher", "Tom", "Victoria", "Zach",
+    "Rob", "Ryan", "Seth", "Shane", "Sonny", "Thatcher", "Tom", "Victoria", "Zach", "Tim",
 ];
 const HOLIDAYS = {
     "2026-11-26": "Thanksgiving",
